@@ -1,7 +1,7 @@
 import { generateToken } from "../lib/utils.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import cloudinary from "../lib/cloudinary.js";
+import imagekit from "../lib/imagekit.js"; // Cloudinary ki jagah ImageKit import
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -94,10 +94,16 @@ export const updateProfile = async (req, res) => {
       return res.status(400).json({ message: "Profile pic is required" });
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePic);
+    // ImageKit Base64 Upload
+    const uploadResponse = await imagekit.upload({
+      file: profilePic,
+      fileName: `avatar_${userId}_${Date.now()}.png`,
+      folder: "/profile_pics",
+    });
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { profilePic: uploadResponse.secure_url },
+      { profilePic: uploadResponse.url },
       { new: true }
     );
 

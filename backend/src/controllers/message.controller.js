@@ -1,7 +1,7 @@
 import User from "../models/user.model.js";
 import Message from "../models/message.model.js";
+import imagekit from "../lib/imagekit.js";
 
-import cloudinary from "../lib/cloudinary.js";
 import { getReceiverSocketId, io } from "../lib/socket.js";
 
 export const getUsersForSidebar = async (req, res) => {
@@ -37,15 +37,29 @@ export const getMessages = async (req, res) => {
 
 export const sendMessage = async (req, res) => {
   try {
-    const { text, image } = req.body;
+    const { text } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
-    let imageUrl;
-    if (image) {
-      // Upload base64 image to cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(image);
-      imageUrl = uploadResponse.secure_url;
+    let imageUrl = "";
+
+    // 1. Multer Buffer File Upload (Postman / Form-data)
+    if (req.file) {
+      const uploadResponse = await imagekit.upload({
+        file: req.file.buffer, // Direct buffer accept karta hai!
+        fileName: `chat_${Date.now()}.${req.file.mimetype.split("/")[1]}`,
+        folder: "/chat_app",
+      });
+      imageUrl = uploadResponse.url;
+    } 
+    // 2. Base64 Upload (Frontend JSON)
+    else if (req.body.image) {
+      const uploadResponse = await imagekit.upload({
+        file: req.body.image, // Base64 String directly accepts
+        fileName: `chat_${Date.now()}.png`,
+        folder: "/chat_app",
+      });
+      imageUrl = uploadResponse.url;
     }
 
     const newMessage = new Message({
@@ -64,7 +78,7 @@ export const sendMessage = async (req, res) => {
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.log("Error in sendMessage controller: ", error.message);
-    res.status(500).json({ error: "Internal server error" });
+    console.log("ImageKit Upload Error:", error);
+    res.status(500).json({ error: error.message || "Internal server error" });
   }
 };
