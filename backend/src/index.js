@@ -14,27 +14,19 @@ dotenv.config();
 const PORT = process.env.PORT || 5001;
 const __dirname = path.resolve();
 
-// Allowed Origins Setup (Local + Production Vercel URL)
-const allowedOrigins = [
-  "http://localhost:5173",
-  process.env.CLIENT_URL,
-].filter(Boolean);
-
 // Middlewares
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
 
-// Dynamic CORS Middleware
+// Allow Localhost + Any Vercel Deployment Link for Chatify
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("CORS policy error: Origin not allowed"));
-      }
-    },
+    origin: [
+      "http://localhost:5173",
+      "https://chatify-3zfuocv9o-suraj-a081.vercel.app",
+      /^https:\/\/chatify-.*\.vercel\.app$/, // Har ek Vercel preview domain ko allow karega
+    ],
     credentials: true,
   })
 );
@@ -50,7 +42,7 @@ app.get("/", (req, res) => {
   });
 });
 
-// Production Static Assets (Agar monorepo setup ho)
+// Production Static Assets
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
